@@ -9,22 +9,21 @@ use Symfony\Component\DomCrawler\Crawler;
 
 class YelpCrawler
 {
+    private $biz_url = 'https://www.yelp.com/biz/route-66-moving-and-storage-company-panorama-city-2';
+
     public function crawl()
     {
-        $client = new Client();
-        $res = $client->request('GET', 'https://www.yelp.com/biz/route-66-moving-and-storage-san-francisco-6');
-        $html =  $res->getBody()->getContents();
+
+        $html = $this->getPage($this->biz_url);
 
         $crawler = new Crawler();
         $crawler->addHtmlContent($html);
 
         $reviews = [];
 
-        for ($i = 0; $i<20; $i++) {
+        $reviews_count = count($crawler->filterXPath(".//*[@id='super-container']/div/div/div[1]/div[5]/div[1]/div[2]/ul/li/div[@data-signup-object]"));
 
-        }
-
-        $reviews[]['yelp_id'] = $crawler->filterXPath(".//*[@id='super-container']/div/div/div[1]/div[5]/div[1]/div[2]/ul/li/div[@data-signup-object]")
+        $review_yelp_id = $crawler->filterXPath(".//*[@id='super-container']/div/div/div[1]/div[5]/div[1]/div[2]/ul/li/div[@data-signup-object]")
             ->each(function (Crawler $node, $i) {
                 return trim($node->attr('data-review-id'));
             });
@@ -49,7 +48,7 @@ class YelpCrawler
 
         $review_text = $crawler->filterXPath(".//*[@id='super-container']/div/div/div[1]/div[5]/div[1]/div[2]/ul/li/div[@data-signup-object]/div[2]/div[1]/p")
             ->each(function (Crawler $node, $i) {
-                return trim($node->html());
+                return trim($node->text());
             });
 
         $review_date = $crawler->filterXPath(".//*[@id='super-container']/div/div/div[1]/div[5]/div[1]/div[2]/ul/li/div[@data-signup-object]/div[2]/div[1]/div/span")
@@ -57,10 +56,42 @@ class YelpCrawler
                 return trim($node->text());
             });
 
-
-
+        for ($i = 0; $i < $reviews_count; $i++) {
+            $reviews[$i] = [
+                'yelp_id' => $review_yelp_id[$i],
+                'url' => 'https://www.yelp.com/biz/route-66-moving-and-storage-company-panorama-city-2?hrid='.$review_yelp_id[$i],
+                'rating' => $review_rating[$i],
+                'username' => $review_username[$i],
+                'userpic' => $review_userpic[$i],
+                'text' => $review_text[$i],
+                'date' => date('Y.m.d', strtotime($review_date[$i]))
+            ];
+        }
 
 
         var_dump($reviews);
+    }
+
+    private function getPage($url)
+    {
+        $client = new Client();
+        $res = $client->request('GET', $url);
+        $html = $res->getBody()->getContents();
+
+        return $html;
+
+    }
+
+    private function getTotalReviews()
+    {
+        $html = $this->getPage($this->biz_url);
+
+        $crawler = new Crawler();
+        $crawler->addHtmlContent($html);
+
+        $reviews_count = $crawler->filterXPath(".//*[@id='wrap']/div[4]/div/div[1]/div/div[2]/div/div[1]/span[@itemprop='reviewCount']")
+            ->text();
+
+        return $reviews_count;
     }
 }
