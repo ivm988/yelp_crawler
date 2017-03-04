@@ -9,7 +9,7 @@ use Symfony\Component\DomCrawler\Crawler;
 
 class YelpCrawler
 {
-    private $biz_url = 'https://www.yelp.com/biz/route-66-moving-and-storage-company-panorama-city-2';
+    private $biz_url = 'https://www.yelp.com/biz/route-66-moving-san-diego';
 
     public function crawl()
     {
@@ -51,20 +51,20 @@ class YelpCrawler
                 return trim($node->text());
             });
 
-        $review_date = $crawler->filterXPath(".//*[@id='super-container']/div/div/div[1]/div[5]/div[1]/div[2]/ul/li/div[@data-signup-object]/div[2]/div[1]/div/span")
+        $review_date = $crawler->filterXPath(".//*[@id='super-container']/div/div/div[1]/div[5]/div[1]/div[2]/ul/li/div[@data-signup-object]/div[2]/div[1]/div/span/text()[normalize-space()]")
             ->each(function (Crawler $node, $i) {
                 return trim($node->text());
             });
 
         for ($i = 0; $i < $reviews_count; $i++) {
             $reviews[$i] = [
-                'yelp_id' => $review_yelp_id[$i],
-                'url' => 'https://www.yelp.com/biz/route-66-moving-and-storage-company-panorama-city-2?hrid='.$review_yelp_id[$i],
-                'rating' => $review_rating[$i],
                 'username' => $review_username[$i],
                 'userpic' => $review_userpic[$i],
                 'text' => $review_text[$i],
-                'date' => date('Y.m.d', strtotime($review_date[$i]))
+                'date' => date('Y-m-d', strtotime($review_date[$i])),
+                'url' => $this->biz_url.'?hrid='.$review_yelp_id[$i],
+                'rating' => $review_rating[$i],
+                'yelp_id' => $review_yelp_id[$i]
             ];
         }
 
@@ -82,7 +82,7 @@ class YelpCrawler
 
     }
 
-    private function getTotalReviews()
+    private function getTotalReviewsCount()
     {
         $html = $this->getPage($this->biz_url);
 
